@@ -101,9 +101,6 @@ AsyncState* async_init()
 
 void async_close(AsyncState* state)
 {
-    for (int i = 0; i <= state->task_count; i++) {
-        free(state->tasks[i].items);
-    }
     free(state->tasks);
 }
 
