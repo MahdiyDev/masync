@@ -13,7 +13,7 @@ int main(int argc, char** argv)
 
     printf("Some thing to do...\n");
 
-    printf("Awaited Message: %s\n", (char*)await(hello_message_task));
+    printf("Awaited Message: %s\n", (char*)await(hello_message_task).resolve);
 
     async_close(state);
 

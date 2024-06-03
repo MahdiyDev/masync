@@ -24,8 +24,8 @@ int main(int argc, char** argv)
     Task* hello_message_task = async_func_priority(state, hello_func, LOW);
     Task* some_message_task = async_func_priority(state, some_thing_func, MID);
 
-    printf("Awaited Message: %s\n", (char*)await(hello_message_task));
-    printf("Awaited Message: %s\n", (char*)await(some_message_task));
+    printf("Awaited Message: %s\n", (char*)await(hello_message_task).resolve);
+    printf("Awaited Message: %s\n", (char*)await(some_message_task).resolve);
 
     async_close(state);
 

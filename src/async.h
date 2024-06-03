@@ -3,6 +3,10 @@
 #include <stdbool.h>
 
 typedef struct Task Task;
+typedef struct {
+    void* resolve;
+    void* reject;
+} TaskResponse;
 typedef struct AsyncState AsyncState;
 
 typedef void (*resolve_func)(Task *task, void*);
@@ -21,4 +25,4 @@ void async_update(AsyncState* state);
 void set_task_update(AsyncState* state, Task *task, task_update update);
 void finish_task(Task *task);
 void wait_task(Task *task);
-void* await(Task *task);
+TaskResponse await(Task *task);

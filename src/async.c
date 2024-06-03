@@ -19,7 +19,6 @@ typedef struct Task {
     void* resolve;
     void* reject;
     int priority;
-    int time_ms;
     Status status;
     task_call_back call_back;
     task_update update;
@@ -57,10 +56,13 @@ void set_task_update(AsyncState* state, Task *task, task_update update)
     state->is_finished = false;
 }
 
-void* await(Task *task)
+TaskResponse await(Task *task)
 {
     task->call_back(task, set_resolve, set_reject);
-    return task->resolve;
+    return (TaskResponse) {
+		.resolve = task->resolve,
+		.reject = task->reject,
+	};
 }
 
 AsyncState* async_init_priority(int priority_start, int priority_end)
