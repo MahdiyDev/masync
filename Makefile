@@ -22,7 +22,7 @@ print_obj:
 	@echo $(COBJECTS) $(EXAMPLE_COBJECTS)
 
 $(BUILD_OBJ_DIR)/%.o: $(SOURCE_DIR)/%.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -g -Og -c $< -o $@
 
 $(BUILD_EXAMPLE_DIR)/%: $(EXAMPLE_SOURCE_DIR)/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) $< $(COBJECTS) -o $@

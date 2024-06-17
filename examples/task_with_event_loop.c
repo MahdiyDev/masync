@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "async.h"
+#include "../src/async.h"
 
 enum TaskPriorities {
     LOW = 0,
@@ -12,7 +12,7 @@ void hello_task_update(Task *task)
     static int a = 0;
     if (a == 1000) {
         finish_task(task);
-        printf("Message: %s\n", (char*)await(task).resolve);
+        printf("Message [take time]: %s\n", (char*)await(task).resolve);
     } else {
         wait_task(task);
         a++;

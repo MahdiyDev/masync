@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "async.h"
+#include "../src/async.h"
 
 enum TaskPriorities {
     LOW = 0,

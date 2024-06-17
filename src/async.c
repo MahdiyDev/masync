@@ -1,9 +1,11 @@
 #include <assert.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "async.h"
+#include "list.h"
 
 #ifndef TASK_COUNT
     #define TASK_COUNT 64
@@ -18,16 +20,20 @@ typedef enum Status {
 typedef struct Task {
     void* resolve;
     void* reject;
-    int priority;
     Status status;
     task_call_back call_back;
     task_update update;
+	Task* next;
 } Task;
+
+typedef struct TaskList {
+	size_t length;
+	Task* head;
+} TaskList;
 
 typedef struct Tasks {
     int index_priority;
-    int taskCounter;
-    Task* items;
+    TaskList* items;
 } Tasks;
 
 typedef struct AsyncState {
@@ -58,6 +64,7 @@ void set_task_update(AsyncState* state, Task *task, task_update update)
 
 TaskResponse await(Task *task)
 {
+    assert(task != NULL && "Task must be not NULL");
     task->call_back(task, set_resolve, set_reject);
     return (TaskResponse) {
 		.resolve = task->resolve,
@@ -73,25 +80,16 @@ AsyncState* async_init_priority(int priority_start, int priority_end)
     state->priority_start = priority_start;
     state->priority_end = priority_end;
 
-    int priority_diff = priority_end - priority_start;
+    int priority_diff = (priority_end - priority_start) + 1;
 
     state->tasks = (Tasks*)malloc(priority_diff * sizeof(Tasks));
     state->task_count = priority_diff;
 
-    for (int i = 0, j = priority_start; i <= priority_diff; i++) {
-        state->tasks[i].taskCounter = 0;
+	for (int i = 0, j = priority_start; i < priority_diff; i++) {
         state->tasks[i].index_priority = j;
-        state->tasks[i].items = (Task*)malloc(TASK_COUNT*sizeof(Task));
-        for (int k = 0; k < TASK_COUNT; k++) {
-            state->tasks[i].items[k].priority = priority_start;
-            state->tasks[i].items[k].status = ASYNC_INIT;
-            state->tasks[i].items[k].resolve = NULL;
-            state->tasks[i].items[k].reject = NULL;
-            state->tasks[i].items[k].call_back = NULL;
-            state->tasks[i].items[k].update = NULL;
-        }
+        create_list(state->tasks[i].items);
         j++;
-    }
+	}
 
     return state;
 }
@@ -103,18 +101,27 @@ AsyncState* async_init()
 
 void async_close(AsyncState* state)
 {
+	for (int i = 0; i < state->task_count; i++) {
+        free_list(state->tasks[i].items);
+    }
     free(state->tasks);
+    free(state);
 }
 
 bool async_is_finished(AsyncState* state)
 {
     state->is_finished = true;
 
-    for (int i = 0; i <= state->task_count; i++) {
-        for (int j = 0; j < state->tasks[i].taskCounter; j++) {
-            if (state->tasks[i].items[j].status == ASYNC_WAITING) {
+    for (int i = 0; i < state->task_count; i++) {
+		Task* task = state->tasks[i].items->head;
+        for (int j = 0; j < state->tasks[i].items->length; j++) {
+			if (task == NULL) {
+				break;
+			}
+            if (task->status == ASYNC_WAITING) {
                 state->is_finished = false;
             }
+			task = task->next;
         }
     }
 
@@ -123,12 +130,16 @@ bool async_is_finished(AsyncState* state)
 
 void async_update(AsyncState* state)
 {
-    for (int i = state->task_count; i >= 0; i--) {
-        for (int j = 0; j < state->tasks[i].taskCounter; j++) {
-            Task* currentTask = &state->tasks[i].items[j];
-            if (currentTask->update != NULL && currentTask->status == ASYNC_WAITING) {
-                currentTask->update(currentTask);
+    for (int i = (state->task_count - 1); i >= 0; i--) {
+		Task* task = state->tasks[i].items->head;
+        for (int j = 0; j < state->tasks[i].items->length; j++) {
+			if (task == NULL) {
+				break;
+			}
+            if (task->update != NULL && task->status == ASYNC_WAITING) {
+                task->update(task);
             }
+			task = task->next;
         }
     }
 }
@@ -146,15 +157,22 @@ void wait_task(Task *task)
 Task* async_func_priority(AsyncState* state, task_call_back call_back, int priority)
 {
     assert(state->priority_start <= priority && state->priority_end >= priority);
-    int priority_diff = state->priority_end - state->priority_start;
+    int priority_diff = (state->priority_end - state->priority_start);
     int task_index = abs(state->priority_start - priority);
 
-    Task* currentTask = &state->tasks[task_index].items[state->tasks[task_index].taskCounter];
+    TaskList* current_task_list = state->tasks[task_index].items;
 
-    currentTask->call_back = call_back;
-    state->tasks[task_index].taskCounter++;
+	Task new_task = {
+		.call_back = call_back,
+		.status = ASYNC_INIT,
+		.resolve = NULL,
+		.reject = NULL,
+		.update = NULL,
+	};
 
-    return currentTask;
+	list_push(current_task_list, new_task);
+
+	return current_task_list->head;
 }
 
 Task* async_func(AsyncState* state, task_call_back call_back)
